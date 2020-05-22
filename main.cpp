@@ -1,158 +1,62 @@
-#include <iostream>
+#include <bits/stdc++.h>
+#include <windows.h>
 #include <SDL.h>
-
+#include <SDL_image.h>
+#include <SDL_ttf.h>
+#include "draw.h"
+#include "game.h"
 using namespace std;
 
-const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 600;
-const string WINDOW_TITLE = "Tiny game";
-
-void initSDL(SDL_Window* &window, SDL_Renderer* &renderer);
-
-void logSDLError(std::ostream& os,
-                 const std::string &msg, bool fatal = false);
-void quitSDL(SDL_Window* window, SDL_Renderer* renderer);
-
-void waitUntilKeyPressed();
-
-struct Box {
-    int x;
-    int y;
-    int size = 10;
-    int stepX = 5;
-    int stepY = 5;
-
-    void render(SDL_Renderer* renderer) {
-        SDL_Rect filled_rect;
-         filled_rect.x = x;
-        filled_rect.y = y;
-        filled_rect.h = size;
-        filled_rect.w = size;
-        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255); // green
-        SDL_RenderFillRect(renderer, &filled_rect);
-
-    }
-
-    void move() {
-    x += stepX;
-    y += stepY;
-    };
-
-    void turnLeft() {
-        stepX = -5;
-        stepY = 0;
-    }
-
-    void turnRight() {
-        stepX = 5;
-        stepY = 0;
-    }
-
-    void turnUp() {
-        stepY = -5;
-        stepX = 0;
-    }
-
-    void turnDown() {
-        stepY = 5;
-        stepX = 0;
-    }
-
-    bool inside (int minX, int minY, int maxX, int maxY){
-        return (minX<=x && minY <=y && x+size<=maxX &&y+size<=maxY);
-    };
-};
-
-int main(int argc, char* argv[])
+int main( int argc, char* args[] )
 {
-    SDL_Window* window;
-    SDL_Renderer* renderer;
-    initSDL(window, renderer);
+    Game app;
 
-    Box box;
-    box.x = 10;
-    box.y = 10;
+    int posX, posY;
     SDL_Event e;
+    initWindow();
+    startGame();
+    while( !app.quit )
+    {
+		while( SDL_PollEvent( &e ) != 0 )
+		{
+			if( e.type == SDL_QUIT ) app.quit = true;
 
-    while (box.inside(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)) {
-        box.move();
-        SDL_SetRenderDrawColor(renderer,255, 255, 255, 255);
-        SDL_RenderClear(renderer);
-        box.render(renderer);
-        SDL_RenderPresent(renderer);
+			if(app.played || ( e.type == SDL_MOUSEBUTTONDOWN && posX>=170 && posX<=327
+                     && posY>=277 && posY<=320))
+            {
+                app.played = true;
+                if(app.restart){
+                    app.init();
 
-        SDL_Delay(5);
+                }
+                 if(app.winner ==-1 && app.player == 0 && e.type == SDL_MOUSEBUTTONDOWN
+                    && e.button.clicks == 2)
+                {
+                    app.updateTouch(posX,posY);
 
-        if (SDL_PollEvent(&e)==0) continue;
+                }
 
-        if (e.type== SDL_QUIT) break;
-
-        if (e.type == SDL_KEYDOWN) {
-            switch (e.key.keysym.sym) {
-                case SDLK_ESCAPE: break;
-                case SDLK_LEFT: box.turnLeft(); break;
-                case SDLK_RIGHT: box.turnRight(); break;
-                case SDLK_DOWN:box.turnDown(); break;
-                case SDLK_UP: box.turnUp(); break;
-
+                if(app.winner!=-1 && e.type == SDL_MOUSEBUTTONDOWN && posX>=173
+                   && posX<=329 &&posY>=279 && posY<=324)
+                {
+                        app.restart = true;
+                }
             }
         }
-        box.move();
+         if (app.winner ==-1 && app.played)
+         {
+                app.update();
+                app.render();
+                app.winner = app.check5();
+         }
+         if(app.winner!=-1) endGame(app.winner);
+
+          if( e.type == SDL_MOUSEMOTION){
+                posX = e.button.x;
+                posY = e.button.y;
+			}
     }
 
-
-
-
-    quitSDL(window, renderer);
+	close();
     return 0;
 }
-
-void logSDLError(std::ostream& os,
-                 const std::string &msg, bool fatal)
-{
-    os << msg << " Error: " << SDL_GetError() << std::endl;
-    if (fatal) {
-        SDL_Quit();
-        exit(1);
-    }
-}
-
-void initSDL(SDL_Window* &window, SDL_Renderer* &renderer)
-{
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0)
-        logSDLError(std::cout, "SDL_Init", true);
-
-    window = SDL_CreateWindow(WINDOW_TITLE.c_str(), SDL_WINDOWPOS_CENTERED,
-    SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
-
-    if (window == nullptr) logSDLError(std::cout, "CreateWindow", true);
-
-
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED |
-                                              SDL_RENDERER_PRESENTVSYNC);
-
-    if (renderer == nullptr) logSDLError(std::cout, "CreateRenderer", true);
-
-
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-    SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
-}
-
-void quitSDL(SDL_Window* window, SDL_Renderer* renderer)
-{
-	SDL_DestroyRenderer(renderer);
-	SDL_DestroyWindow(window);
-	SDL_Quit();
-}
-
-void waitUntilKeyPressed()
-{
-    SDL_Event e;
-    while (true) {
-        if ( SDL_WaitEvent(&e) != 0 &&
-             (e.type == SDL_KEYDOWN || e.type == SDL_QUIT) )
-            return;
-        SDL_Delay(100);
-    }
-}
-
