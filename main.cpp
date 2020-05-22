@@ -15,6 +15,7 @@ int main( int argc, char* args[] )
     SDL_Event e;
     initWindow();
     startGame();
+
     while( !app.quit )
     {
 		while( SDL_PollEvent( &e ) != 0 )
@@ -49,7 +50,11 @@ int main( int argc, char* args[] )
                 app.render();
                 app.winner = app.check5();
          }
-         if(app.winner!=-1) endGame(app.winner);
+         if(app.winner!=-1)
+         {
+             SDL_Delay(1000);
+             endGame(app.winner);
+         }
 
           if( e.type == SDL_MOUSEMOTION){
                 posX = e.button.x;
